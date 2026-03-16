@@ -19,11 +19,16 @@ $patient = $conn->query("SELECT * FROM patient WHERE patient_id=$patient_id")->f
 
 /* Get Medical History (Consultations) */
 $history = $conn->query("
-    SELECT c.*, d.name AS doctor_name
-    FROM consultation c
-    LEFT JOIN doctor d ON c.doctor_id = d.doctor_id
-    WHERE c.patient_id = $patient_id
-    ORDER BY c.date DESC
+SELECT 
+    c.consultation_id,
+    c.diagnosis,
+    c.treatment,
+    c.notes,
+    c.consultation_date
+FROM consultation c
+JOIN appointment a ON c.appointment_id = a.appointment_id
+WHERE a.patient_id = $patient_id
+ORDER BY c.consultation_date DESC
 ");
 ?>
 
@@ -69,13 +74,13 @@ $history = $conn->query("
 
 <h3 class="mt-4">Medical History</h3>
 
-<table class="table table-striped table-bordered">
+<table class="table table-bordered">
 
 <tr>
 <th>Date</th>
-<th>Doctor</th>
 <th>Diagnosis</th>
 <th>Treatment</th>
+<th>Notes</th>
 </tr>
 
 <?php if($history->num_rows > 0): ?>
@@ -83,10 +88,10 @@ $history = $conn->query("
 <?php while($row = $history->fetch_assoc()): ?>
 
 <tr>
-<td><?= $row['date']; ?></td>
-<td><?= $row['doctor_name']; ?></td>
+<td><?= $row['consultation_date']; ?></td>
 <td><?= $row['diagnosis']; ?></td>
 <td><?= $row['treatment']; ?></td>
+<td><?= $row['notes']; ?></td>
 </tr>
 
 <?php endwhile; ?>
