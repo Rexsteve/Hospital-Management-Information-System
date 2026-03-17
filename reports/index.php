@@ -15,7 +15,6 @@ if($_SESSION['role'] != 'admin') {
 }
 
 include "../includes/header.php";
-include "../includes/sidebar.php";
 
 // Date range for current month
 $month_start = date('Y-m-01');
@@ -52,14 +51,17 @@ $pending = $stmt3->get_result()->fetch_assoc()['total'];
 ?>
 
 <div class="main-content">
-    <div class="navbar-top">
+    <div class="navbar-top d-flex justify-content-between align-items-center">
         <h4><i class="bi bi-bar-chart"></i> Reports</h4>
-        <div class="user-info">
+        <div>
+            <a href="../dashboard.php" class="btn btn-sm btn-secondary me-3">
+                <i class="bi bi-house-door"></i> Dashboard
+            </a>
             <span>
                 Welcome, <strong><?php echo $_SESSION['username']; ?></strong> 
                 (<?php echo $_SESSION['role']; ?>)
             </span>
-            <div class="user-avatar">
+            <div class="user-avatar d-inline-block ms-2">
                 <?php echo strtoupper(substr($_SESSION['username'], 0, 1)); ?>
             </div>
         </div>
