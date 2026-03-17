@@ -121,6 +121,8 @@ if($role == 'admin' || $role == 'cashier') {
 
     <?php if($role == 'admin' || $role == 'cashier'): ?>
         <a href="billing/list.php"><i class="bi bi-receipt"></i> Billing</a>
+        <a href="invoice/list.php"><i class="bi bi-file-earmark-text"></i> Invoices</a>
+        <a href="invoice/generate.php"><i class="bi bi-plus-square"></i> Generate Invoice</a>
         <a href="payment/list.php"><i class="bi bi-credit-card"></i> Payments</a>
     <?php endif; ?>
 
