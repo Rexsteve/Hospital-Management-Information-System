@@ -16,6 +16,12 @@ $invoices = mysqli_query($conn,
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
+<!-- Back Button -->
+<div class="p-3">
+    <a href="../dashboard.php" class="btn btn-secondary mb-3">
+        ← Back to Dashboard
+    </a>
+</div>
     <div class="container mt-4">
         <h2>All Invoices</h2>
         
@@ -46,8 +52,8 @@ $invoices = mysqli_query($conn,
                             <td><?= $row['created_at'] ?></td>
                             <td>
                                 <?php if($row['status'] == 'unpaid'): ?>
-                                    <a href="generate.php?invoice_id=<?= $row['invoice_id'] ?>" 
-                                       class="btn btn-success btn-sm">Make Payment</a>
+                                    <a href="../payment/make.php?invoice_id=<?= $row['invoice_id'] ?>" 
+                                    class="btn btn-success btn-sm">Make Payment</a>
                                 <?php endif; ?>
                             </td>
                         </tr>

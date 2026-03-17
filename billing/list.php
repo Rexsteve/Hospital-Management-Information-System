@@ -23,7 +23,7 @@ $result = $conn->query("
 </head>
 <body class="p-4">
 
-<h3>Billing / Invoices</h3>
+<h3>Billings List</h3>
 <a href="../dashboard.php" class="btn btn-secondary mb-3">Back</a>
 
 <table class="table table-bordered">
