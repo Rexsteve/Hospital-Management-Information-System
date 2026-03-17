@@ -19,6 +19,31 @@ $patients = $conn->query("SELECT * FROM patient ORDER BY name ASC");
 /* Fetch Doctors */
 $doctors = $conn->query("SELECT * FROM doctor ORDER BY name ASC");
 
+$availability = [];
+
+/* CHECK AVAILABILITY (based on form input) */
+if(isset($_POST['doctor_id']) && isset($_POST['appointment_date'])){
+
+    $doc = $_POST['doctor_id'];
+    $date = $_POST['appointment_date'];
+
+    $stmt = $conn->prepare("
+        SELECT appointment_time 
+        FROM appointment 
+        WHERE doctor_id=? 
+        AND appointment_date=?
+        AND status != 'Cancelled'
+    ");
+    $stmt->bind_param("is", $doc, $date);
+    $stmt->execute();
+    $res = $stmt->get_result();
+
+    while($row = $res->fetch_assoc()){
+        $availability[] = $row['appointment_time'];
+    }
+}
+
+/* HANDLE FORM SUBMIT */
 if(isset($_POST['submit'])) {
 
     $patient_id = $_POST['patient_id'];
@@ -27,18 +52,36 @@ if(isset($_POST['submit'])) {
     $time = $_POST['appointment_time'];
     $status = "Pending";
 
-    $sql = "INSERT INTO appointment 
-            (patient_id, doctor_id, appointment_date, appointment_time, status)
-            VALUES (?, ?, ?, ?, ?)";
+    // 🔴 CHECK DOUBLE BOOKING
+    $check = $conn->prepare("
+        SELECT * FROM appointment 
+        WHERE doctor_id=? 
+        AND appointment_date=? 
+        AND appointment_time=?
+        AND status != 'Cancelled'
+    ");
+    $check->bind_param("iss", $doctor_id, $date, $time);
+    $check->execute();
+    $result = $check->get_result();
 
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iisss", $patient_id, $doctor_id, $date, $time, $status);
-
-    if($stmt->execute()) {
-        header("Location: list.php?success=1");
-        exit();
+    if($result->num_rows > 0){
+        $error = "Doctor is not available at this time!";
     } else {
-        $error = "Error: " . $conn->error;
+
+        // ✅ INSERT
+        $sql = "INSERT INTO appointment 
+                (patient_id, doctor_id, appointment_date, appointment_time, status)
+                VALUES (?, ?, ?, ?, ?)";
+
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("iisss", $patient_id, $doctor_id, $date, $time, $status);
+
+        if($stmt->execute()) {
+            header("Location: list.php?success=1");
+            exit();
+        } else {
+            $error = "Error: " . $conn->error;
+        }
     }
 }
 ?>
@@ -70,6 +113,16 @@ if(isset($_POST['submit'])) {
     </div>
 <?php endif; ?>
 
+<!-- ✅ AVAILABILITY DISPLAY -->
+<?php if(!empty($availability)): ?>
+    <div class="alert alert-warning">
+        <b>Doctor already booked at:</b><br>
+        <?php foreach($availability as $t): ?>
+            <span class="badge bg-danger"><?= $t ?></span>
+        <?php endforeach; ?>
+    </div>
+<?php endif; ?>
+
 <form method="POST" class="card p-4" style="max-width:600px;">
 
     <div class="mb-3">
@@ -77,7 +130,8 @@ if(isset($_POST['submit'])) {
         <select name="patient_id" class="form-select" required>
             <option value="">Select Patient</option>
             <?php while($p = $patients->fetch_assoc()): ?>
-                <option value="<?= $p['patient_id']; ?>">
+                <option value="<?= $p['patient_id']; ?>"
+                <?= (isset($_POST['patient_id']) && $_POST['patient_id']==$p['patient_id']) ? 'selected':'' ?>>
                     <?= $p['name']; ?>
                 </option>
             <?php endwhile; ?>
@@ -89,7 +143,8 @@ if(isset($_POST['submit'])) {
         <select name="doctor_id" class="form-select" required>
             <option value="">Select Doctor</option>
             <?php while($d = $doctors->fetch_assoc()): ?>
-                <option value="<?= $d['doctor_id']; ?>">
+                <option value="<?= $d['doctor_id']; ?>"
+                <?= (isset($_POST['doctor_id']) && $_POST['doctor_id']==$d['doctor_id']) ? 'selected':'' ?>>
                     <?= $d['name']; ?>
                 </option>
             <?php endwhile; ?>
@@ -98,12 +153,14 @@ if(isset($_POST['submit'])) {
 
     <div class="mb-3">
         <label class="form-label">Date</label>
-        <input type="date" name="appointment_date" class="form-control" required>
+        <input type="date" name="appointment_date" class="form-control"
+        value="<?= $_POST['appointment_date'] ?? '' ?>" required>
     </div>
 
     <div class="mb-3">
         <label class="form-label">Time</label>
-        <input type="time" name="appointment_time" class="form-control" required>
+        <input type="time" name="appointment_time" class="form-control"
+        value="<?= $_POST['appointment_time'] ?? '' ?>" required>
     </div>
 
     <button type="submit" name="submit" class="btn btn-success">
