@@ -2,7 +2,6 @@
 session_start();
 include "../config/db.php";
 include "../includes/header.php";
-include "../includes/sidebar.php";
 
 // Get start and end of current week (Monday to Sunday)
 $week_start = date('Y-m-d', strtotime('monday this week'));

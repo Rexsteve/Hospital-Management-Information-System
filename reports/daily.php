@@ -2,7 +2,6 @@
 session_start();
 include "../config/db.php";
 include "../includes/header.php";
-include "../includes/sidebar.php";
 
 $today = date('Y-m-d');
 

@@ -2,7 +2,6 @@
 session_start();
 include "../config/db.php";
 include "../includes/header.php";
-include "../includes/sidebar.php";
 
 // Get selected month or default to current month
 $selected_month = $_GET['month'] ?? date('m');
