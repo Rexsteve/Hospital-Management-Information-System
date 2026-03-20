@@ -12,16 +12,35 @@ if(isset($_POST['login'])) {
     
     if(mysqli_num_rows($query) == 1) {
         $user = mysqli_fetch_assoc($query);
+
         if(password_verify($password, $user['password'])) {
+
+            // Store basic session
             $_SESSION['user_id'] = $user['user_id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['role'] = $user['role'];
-            
+
+            // ✅ If user is a doctor, get doctor_id
+            if($user['role'] == 'doctor') {
+
+                $stmt = $conn->prepare("SELECT doctor_id FROM doctor WHERE user_id = ?");
+                $stmt->bind_param("i", $user['user_id']);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $doctor = $result->fetch_assoc();
+
+                if($doctor) {
+                    $_SESSION['doctor_id'] = $doctor['doctor_id'];
+                }
+            }
+
             header("Location: ../dashboard.php");
             exit();
+
         } else {
             $error = "Invalid password!";
         }
+
     } else {
         $error = "User not found!";
     }
