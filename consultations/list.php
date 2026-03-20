@@ -37,7 +37,6 @@ $result = $conn->query($sql);
 
 <h3>Consultations</h3>
 
-<!-- Navigation -->
 <div class="mb-3">
     <a href="../dashboard.php" class="btn btn-secondary">
         ← Back to Dashboard
@@ -50,7 +49,6 @@ $result = $conn->query($sql);
     <?php endif; ?>
 </div>
 
-<!-- Success Message -->
 <?php if(isset($_GET['success'])): ?>
     <div class="alert alert-success">
         Consultation saved successfully!
@@ -83,6 +81,9 @@ $result = $conn->query($sql);
             <td>
                 <a href="view.php?id=<?= $row['consultation_id']; ?>" 
                    class="btn btn-sm btn-info">View</a>
+
+                <a href="../prescription/add.php?consultation_id=<?= $row['consultation_id']; ?>" 
+                   class="btn btn-sm btn-success">Prescribe</a>
 
                 <?php if($_SESSION['role'] == 'admin'): ?>
                     <a href="edit.php?id=<?= $row['consultation_id']; ?>" 
