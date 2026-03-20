@@ -39,6 +39,8 @@ $invoices = mysqli_query($conn,
                         <th>Invoice ID</th>
                         <th>Patient</th>
                         <th>Total Amount</th>
+                        <th>Paid</th>
+                        <th>Balance</th>
                         <th>Status</th>
                         <th>Date</th>
                         <th>Action</th>
@@ -47,23 +49,57 @@ $invoices = mysqli_query($conn,
 
                 <tbody>
                     <?php while($row = mysqli_fetch_assoc($invoices)): ?>
-                    <tr>
-                        <td><?= $row['invoice_id'] ?></td>
-                        <td><?= $row['patient_name'] ?></td>
-                        <td>Ksh <?= number_format($row['total_amount'], 2) ?></td>
-                        <td>
-                            <span class="badge bg-<?= $row['status'] == 'paid' ? 'success' : 'warning' ?>">
-                                <?= $row['status'] ?>
-                            </span>
-                        </td>
-                        <td><?= $row['created_at'] ?></td>
-                        <td>
-                            <?php if($row['status'] == 'unpaid'): ?>
-                                <a href="../payment/make.php?invoice_id=<?= $row['invoice_id'] ?>" 
-                                   class="btn btn-success btn-sm">Pay</a>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
+
+                        <?php
+                        $invoice_id = $row['invoice_id'];
+                        $total = $row['total_amount'];
+
+                        // ✅ Get total paid from payment table
+                        $paid_query = mysqli_query($conn,
+                            "SELECT COALESCE(SUM(amount_paid),0) as total_paid 
+                             FROM payment 
+                             WHERE invoice_id = $invoice_id");
+
+                        $paid_row = mysqli_fetch_assoc($paid_query);
+                        $paid = $paid_row['total_paid'];
+
+                        $balance = $total - $paid;
+
+                        // ✅ Determine status
+                        if($paid == 0){
+                            $status = "Unpaid";
+                            $badge = "danger";
+                        } elseif($paid < $total){
+                            $status = "Partially Paid";
+                            $badge = "warning";
+                        } else {
+                            $status = "Fully Paid";
+                            $badge = "success";
+                        }
+                        ?>
+
+                        <tr>
+                            <td><?= $invoice_id ?></td>
+                            <td><?= $row['patient_name'] ?></td>
+                            <td>Ksh <?= number_format($total, 2) ?></td>
+                            <td>Ksh <?= number_format($paid, 2) ?></td>
+                            <td>Ksh <?= number_format($balance, 2) ?></td>
+                            <td>
+                                <span class="badge bg-<?= $badge ?>">
+                                    <?= $status ?>
+                                </span>
+                            </td>
+                            <td><?= $row['created_at'] ?></td>
+                            <td>
+                                <?php if($status != "Fully Paid"): ?>
+                                    <a href="../payment/make.php?invoice_id=<?= $invoice_id ?>" 
+                                       class="btn btn-success btn-sm">
+                                       Pay
+                                    </a>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+
                     <?php endwhile; ?>
                 </tbody>
 
