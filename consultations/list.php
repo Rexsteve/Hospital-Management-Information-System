@@ -14,10 +14,24 @@ if($_SESSION['role'] != 'admin' && $_SESSION['role'] != 'doctor') {
 
 $role = $_SESSION['role'];
 
-/* ✅ Get doctor_id safely */
-$doctor_id = isset($_SESSION['doctor_id']) ? intval($_SESSION['doctor_id']) : 0;
+/* ✅ Get doctor_id from session or DB */
+$doctor_id = 0;
 
-/* ✅ Base query (now uses consultation.doctor_id) */
+if($role == 'doctor') {
+    $user_id = $_SESSION['user_id'];
+
+    $stmt = $conn->prepare("SELECT doctor_id FROM doctor WHERE user_id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+
+    if($row = $res->fetch_assoc()) {
+        $doctor_id = $row['doctor_id'];
+        $_SESSION['doctor_id'] = $doctor_id; // store it for reuse
+    }
+}
+
+/* ✅ Base query */
 $sql = "
 SELECT consultation.*,
        patient.name AS patient_name,
@@ -28,7 +42,7 @@ JOIN patient ON appointment.patient_id = patient.patient_id
 JOIN doctor ON consultation.doctor_id = doctor.doctor_id
 ";
 
-/* ✅ Filter consultations for logged-in doctor */
+/* ✅ Filter for doctor */
 if($role == 'doctor' && $doctor_id > 0) {
     $sql .= " WHERE consultation.doctor_id = $doctor_id ";
 }

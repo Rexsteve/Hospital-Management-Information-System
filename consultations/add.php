@@ -1,9 +1,4 @@
 <?php
-
-echo "ROLE: " . $_SESSION['role'] . "<br>";
-echo "DOCTOR_ID: " . $_SESSION['doctor_id'] . "<br>";
-exit;
-
 session_start();
 include "../config/db.php";
 
@@ -12,19 +7,30 @@ if(!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Only admin & doctor allowed
 if($_SESSION['role'] != 'admin' && $_SESSION['role'] != 'doctor') {
     header("Location: ../dashboard.php");
     exit();
 }
 
 $role = $_SESSION['role'];
-$session_doctor_id = isset($_SESSION['doctor_id']) ? intval($_SESSION['doctor_id']) : 0;
+$user_id = $_SESSION['user_id'];
+
+/* ✅ Resolve doctor_id safely */
+$doctor_id = 0;
+
+$stmt = $conn->prepare("SELECT doctor_id FROM doctor WHERE user_id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$res = $stmt->get_result();
+
+if($row = $res->fetch_assoc()) {
+    $doctor_id = $row['doctor_id'];
+    $_SESSION['doctor_id'] = $doctor_id;
+}
 
 /* ✅ Fetch appointments */
 if($role == 'doctor') {
-    // Doctor sees ONLY their appointments
-    $appointments = $conn->query("
+    $appointments = $conn->prepare("
         SELECT appointment.appointment_id,
                patient.name AS patient_name,
                doctor.name AS doctor_name
@@ -32,11 +38,13 @@ if($role == 'doctor') {
         JOIN patient ON appointment.patient_id = patient.patient_id
         JOIN doctor ON appointment.doctor_id = doctor.doctor_id
         WHERE appointment.status = 'pending'
-        AND appointment.doctor_id = $session_doctor_id
+        AND appointment.doctor_id = ?
         ORDER BY appointment.appointment_date DESC
     ");
+    $appointments->bind_param("i", $doctor_id);
+    $appointments->execute();
+    $appointments = $appointments->get_result();
 } else {
-    // Admin sees all
     $appointments = $conn->query("
         SELECT appointment.appointment_id,
                patient.name AS patient_name,
@@ -55,12 +63,10 @@ if(isset($_POST['submit'])) {
     $diagnosis = $_POST['diagnosis'];
     $treatment = $_POST['treatment'];
 
-    /* ✅ Get correct doctor_id */
+    /* ✅ Doctor ID */
     if($role == 'doctor') {
-        // Doctor uses their own ID
-        $doctor_id = $session_doctor_id;
+        $doctor_id = $_SESSION['doctor_id'];
     } else {
-        // Admin → fetch doctor from appointment
         $stmt = $conn->prepare("SELECT doctor_id FROM appointment WHERE appointment_id = ?");
         $stmt->bind_param("i", $appointment_id);
         $stmt->execute();
@@ -69,16 +75,15 @@ if(isset($_POST['submit'])) {
         $doctor_id = $row['doctor_id'];
     }
 
-    /* ✅ Insert consultation WITH doctor_id */
-    $sql = "INSERT INTO consultation (appointment_id, doctor_id, diagnosis, treatment)
-            VALUES (?, ?, ?, ?)";
-
-    $stmt = $conn->prepare($sql);
+    /* Insert consultation */
+    $stmt = $conn->prepare("
+        INSERT INTO consultation (appointment_id, doctor_id, diagnosis, treatment)
+        VALUES (?, ?, ?, ?)
+    ");
     $stmt->bind_param("iiss", $appointment_id, $doctor_id, $diagnosis, $treatment);
 
     if($stmt->execute()) {
 
-        // ✅ Mark appointment as completed
         $update = $conn->prepare("UPDATE appointment SET status = 'completed' WHERE appointment_id = ?");
         $update->bind_param("i", $appointment_id);
         $update->execute();
