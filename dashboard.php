@@ -10,7 +10,23 @@ include "config/db.php";
 
 $role = $_SESSION['role'];
 $username = $_SESSION['username'];
+$user_id = $_SESSION['user_id'];
 
+/* ✅ Get doctor_id if user is a doctor */
+$doctor_id = 0;
+
+if($role === 'doctor') {
+    $stmt = $conn->prepare("SELECT doctor_id FROM doctor WHERE user_id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+
+    if($row = $res->fetch_assoc()) {
+        $doctor_id = $row['doctor_id'];
+    }
+}
+
+/* Helper function */
 function getValue($conn, $query, $field) {
     $result = mysqli_query($conn, $query);
     if($result && mysqli_num_rows($result) > 0) {
@@ -19,32 +35,50 @@ function getValue($conn, $query, $field) {
     return 0;
 }
 
+/* Default values */
 $total_patients = 0;
 $total_doctors = 0;
 $today_appointments = 0;
 $low_stock = 0;
 $today_payments = 0;
 
+/* Patients */
 if($role == 'admin' || $role == 'receptionist') {
     $total_patients = getValue($conn, "SELECT COUNT(*) as count FROM patient", "count");
 }
 
+/* Doctors */
 if($role == 'admin') {
     $total_doctors = getValue($conn, "SELECT COUNT(*) as count FROM doctor", "count");
 }
 
-if($role == 'admin' || $role == 'doctor') {
-    $today_appointments = getValue($conn, 
+/* Appointments */
+if($role == 'admin') {
+    $today_appointments = getValue($conn,
         "SELECT COUNT(*) as count FROM appointment WHERE appointment_date = CURDATE()", "count");
 }
+elseif($role == 'doctor' && $doctor_id > 0) {
+    $stmt = $conn->prepare("
+        SELECT COUNT(*) as count 
+        FROM appointment 
+        WHERE appointment_date = CURDATE()
+        AND doctor_id = ?
+    ");
+    $stmt->bind_param("i", $doctor_id);
+    $stmt->execute();
+    $res = $stmt->get_result()->fetch_assoc();
+    $today_appointments = $res['count'];
+}
 
+/* Pharmacy */
 if($role == 'admin' || $role == 'pharmacist') {
-    $low_stock = getValue($conn, 
+    $low_stock = getValue($conn,
         "SELECT COUNT(*) as count FROM drug WHERE quantity < 10", "count");
 }
 
+/* Payments */
 if($role == 'admin' || $role == 'cashier') {
-    $today_payments = getValue($conn, 
+    $today_payments = getValue($conn,
         "SELECT COALESCE(SUM(amount_paid),0) as total 
          FROM payment 
          WHERE DATE(payment_date) = CURDATE()", "total");
@@ -67,10 +101,9 @@ if($role == 'admin' || $role == 'cashier') {
             height:100vh;
             background:#2f3542;
             padding-top:20px;
-
             display:flex;
             flex-direction:column;
-            overflow-y:auto; /* ✅ allows scrolling */
+            overflow-y:auto;
         }
 
         .sidebar a{
@@ -96,7 +129,7 @@ if($role == 'admin' || $role == 'cashier') {
         }
 
         .sidebar-footer{
-            margin-top:auto; /* ✅ pushes logout to bottom */
+            margin-top:auto;
         }
     </style>
 </head>
@@ -142,7 +175,6 @@ if($role == 'admin' || $role == 'cashier') {
 
     </div>
 
-    <!-- Logout pinned at bottom -->
     <div class="sidebar-footer">
         <hr class="text-white">
         <a href="auth/logout.php" class="text-danger">
@@ -211,41 +243,43 @@ if($role == 'admin' || $role == 'cashier') {
         </h2>
     </div>
     <?php endif; ?>
+
     <?php if($role == 'admin' || $role == 'cashier'): ?>
-<div class="card mt-4 p-4">
-    <h5>Recent Unpaid Invoices</h5>
+    <div class="card mt-4 p-4">
+        <h5>Recent Unpaid Invoices</h5>
 
-    <?php
-    $recent_invoices = mysqli_query($conn,
-        "SELECT i.*, p.name as patient_name
-         FROM invoice i
-         JOIN patient p ON i.patient_id = p.patient_id
-         WHERE i.status = 'unpaid'
-         ORDER BY i.created_at DESC
-         LIMIT 5");
-    ?>
+        <?php
+        $recent_invoices = mysqli_query($conn,
+            "SELECT i.*, p.name as patient_name
+             FROM invoice i
+             JOIN patient p ON i.patient_id = p.patient_id
+             WHERE i.status = 'unpaid'
+             ORDER BY i.created_at DESC
+             LIMIT 5");
+        ?>
 
-    <?php if($recent_invoices && mysqli_num_rows($recent_invoices) > 0): ?>
-        <table class="table table-bordered">
-            <tr>
-                <th>#</th>
-                <th>Patient</th>
-                <th>Amount</th>
-                <th>Date</th>
-            </tr>
-            <?php while($row = mysqli_fetch_assoc($recent_invoices)): ?>
-            <tr>
-                <td><?= $row['invoice_id'] ?></td>
-                <td><?= $row['patient_name'] ?></td>
-                <td>Ksh <?= number_format($row['total_amount'],2) ?></td>
-                <td><?= date('d M Y', strtotime($row['created_at'])) ?></td>
-            </tr>
-            <?php endwhile; ?>
-        </table>
+        <?php if($recent_invoices && mysqli_num_rows($recent_invoices) > 0): ?>
+            <table class="table table-bordered">
+                <tr>
+                    <th>#</th>
+                    <th>Patient</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                </tr>
+                <?php while($row = mysqli_fetch_assoc($recent_invoices)): ?>
+                <tr>
+                    <td><?= $row['invoice_id'] ?></td>
+                    <td><?= $row['patient_name'] ?></td>
+                    <td>Ksh <?= number_format($row['total_amount'],2) ?></td>
+                    <td><?= date('d M Y', strtotime($row['created_at'])) ?></td>
+                </tr>
+                <?php endwhile; ?>
+            </table>
         <?php else: ?>
             <p class="text-muted">No unpaid invoices.</p>
         <?php endif; ?>
-        </div>
+
+    </div>
     <?php endif; ?>
 
     <div class="text-center mt-5 text-muted">

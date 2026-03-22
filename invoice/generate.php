@@ -107,7 +107,7 @@ if(isset($_POST['generate'])) {
                         </button>
 
                         <a href="../invoice/list.php" class="btn btn-secondary w-100 mt-2">
-                            Back to Invoice List
+                            Invoice List
                         </a>
 
                     </form>
