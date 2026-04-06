@@ -39,10 +39,3 @@ A web-based system designed to manage hospital operations including patient reco
 \## 📊 Project Purpose
 
 This system was built as part of a software development project to simulate real-world hospital workflows and improve digital record keeping.
-
-
-
-\## 👨‍💻 Author
-
-Rex Steve
-
