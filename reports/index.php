@@ -8,8 +8,8 @@ if(!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Admin only
-if($_SESSION['role'] != 'admin') {
+// Admin and only
+if($_SESSION['role'] != 'admin' && $_SESSION['role'] != 'cashier') {
     header("Location: ../dashboard.php");
     exit();
 }
